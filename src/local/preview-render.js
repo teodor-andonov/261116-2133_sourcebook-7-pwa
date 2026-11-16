@@ -55,8 +55,11 @@ async function readText(file, type) {
   if (text.includes("\0")) return {};
   if (type !== "link") return { text, truncated: file.size > cap };
   try {
+    const trimmed = text.trim();
     const address =
-      /^\s*URL\s*=\s*(.+)$/im.exec(text)?.[1]?.trim() || text.trim();
+      /^\s*URL\s*=\s*(.+)$/im.exec(text)?.[1]?.trim() ||
+      /^<(https?:\/\/[^<>\s]+)>$/i.exec(trimmed)?.[1] ||
+      trimmed;
     const url = new URL(address);
     if (file.size <= cap && ["http:", "https:"].includes(url.protocol))
       return {

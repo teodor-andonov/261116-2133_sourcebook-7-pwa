@@ -30,6 +30,7 @@
             "application/pdf",
             "application/octet-stream",
             ".url",
+            ".link",
             ".md",
             ".zip",
             ".dwg",
@@ -47,7 +48,7 @@
         "image/jpeg": [".jpg", ".jpeg"],
         "application/pdf": [".pdf"],
         "text/markdown": [".md", ".markdown"],
-        "text/plain": [".txt"]
+        "text/plain": [".txt", ".link"]
       }
     }
   ]

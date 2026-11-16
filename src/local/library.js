@@ -912,6 +912,8 @@ export class Library {
     const extension = extensionOf(
       job.kind === "upload" ? job.name : nameOf(job.source),
     );
+    if (extension.toLowerCase() === ".url")
+      throw new Problem(400, "Paste the web address to save it as a .link file.");
     const path =
       job.destination ??
       ["files", job.folder, job.resource + extension].filter(Boolean).join("/");

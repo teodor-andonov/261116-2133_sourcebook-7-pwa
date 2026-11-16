@@ -18,7 +18,7 @@ To try installation, sharing or offline launch, run `npm run build` and then `np
 - **New library** initializes an empty folder. **Open library** attaches a Sourcebook 7 folder. Use the library button in the sidebar to switch or reauthorize access.
 - Add files from Sourcebook, or put them in `files/` and click **Refresh** to assign IDs in place. Files copied to `staging/` appear in **Drop Inbox** after Refresh and can be processed into a folder.
 - For an external move, leave the timestamp filename and extension intact and click **Refresh**. If the filename changed, find the missing entry under **Needs attention** and use **Relink original** after Refresh adopts the renamed file.
-- A saved URL has an offline title-and-address preview. Following the link opens the destination in a browser tab.
+- Paste a web address to save it as a plain-text `.link` file containing a Markdown autolink. Quick Look shows the address offline, and following it opens a browser tab. For a Windows `.url` shortcut, paste its address to capture it.
 
 ## Library layout
 

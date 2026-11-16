@@ -88,8 +88,9 @@ export function captureEntries({
     return links.map(
       (link) =>
         new File(
-          ["[InternetShortcut]\r\nURL=" + link + "\r\n"],
-          (name || new URL(link).hostname || "Link") + ".url",
+          ["<" + link + ">\n"],
+          (name || new URL(link).hostname || "Link") + ".link",
+          { type: "text/plain" },
         ),
     );
   if (realFiles.length) return realFiles;

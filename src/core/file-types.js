@@ -9,7 +9,7 @@ const groups = [
   ["pdf", "file-text", "hsl(0 50% 50%)", "pdf"],
   ["video", "video", "hsl(270 50% 50%)", "mp4 webm mov m4v mkv avi"],
   ["audio", "audio", "hsl(180 50% 50%)", "mp3 wav ogg opus flac m4a aac"],
-  ["link", "link", "hsl(210 50% 50%)", "url sblink"],
+  ["link", "link", "hsl(210 50% 50%)", "link url sblink"],
   ["text", "file-text", "hsl(150 50% 50%)", "md markdown txt log csv tsv"],
   [
     "code",
