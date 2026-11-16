@@ -8,3 +8,4 @@ Read `docs/status.md` at startup. Sourcebook 5 is the reference for ported workf
 - Use disposable libraries in development and put disposable evidence under `test-artifacts/`. Build and smoke-test the affected workflows.
 - Record substantive work under `docs/sessions/` and link it in `docs/status.md`. Use Europe/London time and `YYMMDD-HHmm` for new records and evidence.
 - Install the version hook with `git config core.hooksPath .githooks` and stage the package manifest and lockfile together for version changes.
+- Before starting a request, checkpoint uncommitted work in the repository being changed. Commit the completed request after verification. Use intermediate commits for larger tasks when they provide useful checkpoints.
