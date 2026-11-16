@@ -1,0 +1,108 @@
+.inspector > header {
+  height: var(--bar-height);
+  min-height: var(--bar-height);
+  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--type-support);
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+#inspector-content {
+  overflow: auto;
+  flex: 1;
+}
+.inspector-empty {
+  height: 180px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: var(--type-support);
+}
+.inspector-preview {
+  padding: 16px 14px 0;
+}
+.inspector-preview .thumbnail {
+  height: 190px;
+  background: var(--bg);
+}
+.inspector-section {
+  padding: 14px 16px;
+}
+.inspector-section h3 {
+  font-size: var(--type-support);
+  font-weight: 600;
+  margin: 0 0 12px;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.tag-editor {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.tag-chip {
+  font-size: var(--type-support);
+  border: 0;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 4px 6px;
+  display: inline-flex;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tag-chip + .tag-chip {
+  margin-left: 3px;
+}
+.notes-field {
+  font-size: var(--type-support);
+  color: var(--muted);
+}
+.notes-field textarea {
+  color: var(--text);
+  background: transparent;
+  min-height: 55px;
+  resize: vertical;
+  font-size: var(--type-support);
+}
+.inspector-actions {
+  display: flex;
+  gap: 5px;
+  margin: 9px 0;
+}
+.file-information {
+  display: grid;
+  grid-template-columns: 53px minmax(0, 1fr);
+  gap: 9px 8px;
+  margin: 18px 0;
+  font-size: var(--type-support);
+  line-height: 1.5;
+}
+.file-information dt {
+  color: var(--muted);
+}
+.file-information dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.inspector .thumbnail .availability {
+  bottom: 7px;
+}
+.issue {
+  padding: 12px;
+  border: 1px solid var(--line);
+  margin: 9px 0;
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: var(--type-support);
+}
+.issue span {
+  color: var(--muted);
+}
