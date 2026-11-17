@@ -33,20 +33,20 @@ async function registry(mode, change) {
   });
 }
 
-export async function recentLibraries() {
-  const entries = await registry("readonly", (store) => store.getAll());
-  return Promise.all(
-    entries
-      .sort((a, b) => b.used - a.used)
-      .map(async ({ id, title, handle }) => ({
-        id,
-        title,
-        authorized: await handle.queryPermission({ mode: "readwrite" }).then(
-          (permission) => permission === "granted",
-          () => false,
-        ),
-      })),
-  );
+const mode = { mode: "readwrite" };
+let recentHandles = new Map();
+
+async function authorized(handle) {
+  try {
+    return (await handle.queryPermission(mode)) === "granted";
+  } catch {
+    return false;
+  }
+}
+
+export async function libraryAuthorized(id) {
+  const entry = recentHandles.get(id);
+  return entry ? authorized(entry.handle) : false;
 }
 
 async function mount(handle, title) {
@@ -67,7 +67,7 @@ async function mount(handle, title) {
     info = await files.json(format);
     if (info?.format !== 1 || !info.id)
       throw new Problem(400, "Choose a Sourcebook 7 library folder.");
-    for (const directory of layout) await files.directory(directory);
+    await Promise.all(layout.map((directory) => files.directory(directory)));
   }
   let library = opened.get(info.id);
   if (!library) {
@@ -80,9 +80,9 @@ async function mount(handle, title) {
       "This library is already open from another folder in this app session.",
     );
   }
-  await registry("readwrite", (store) =>
-    store.put({ id: info.id, title: info.title, handle, used: Date.now() }),
-  );
+  const entry = { id: info.id, title: info.title, handle, used: Date.now() };
+  recentHandles.set(info.id, entry);
+  await registry("readwrite", (store) => store.put(entry));
   return { id: info.id, title: info.title };
 }
 
@@ -99,22 +99,31 @@ export async function pickLibrary(title) {
   return mount(handle, title);
 }
 
-let recentHandles = new Map();
-export async function loadRecent() {
+export async function loadRecent(checkPermission = true) {
   const entries = await registry("readonly", (store) => store.getAll());
   recentHandles = new Map(entries.map((entry) => [entry.id, entry]));
-  return recentLibraries();
+  return Promise.all(
+    entries
+      .sort((a, b) => b.used - a.used)
+      .map(async ({ id, title, handle }) => ({
+        id,
+        title,
+        authorized: checkPermission && (await authorized(handle)),
+      })),
+  );
 }
 
 export async function reopenLibrary(id, prompt = false) {
   const entry = recentHandles.get(id);
   if (!entry) throw new Problem(404, "Choose the library folder again.");
-  const mode = { mode: "readwrite" };
-  const permission = await (prompt
-    ? entry.handle.requestPermission(mode)
-    : entry.handle.queryPermission(mode));
-  if (permission !== "granted")
+  const granted = prompt
+    ? (await entry.handle.requestPermission(mode)) === "granted"
+    : await authorized(entry.handle);
+  if (!granted)
     throw new Problem(403, "Allow access or choose the library folder again.");
+  const library = opened.get(id);
+  if (library && (await library.files.root.isSameEntry(entry.handle)))
+    return { id, title: entry.title };
   return mount(entry.handle);
 }
 

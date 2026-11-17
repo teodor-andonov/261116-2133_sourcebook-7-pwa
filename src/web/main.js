@@ -36,7 +36,12 @@ import {
 import { icon } from "./icons.js";
 import { layout, mountShell } from "./shell.js";
 import { downloadOriginal, json, request } from "./transport.js";
-import { loadRecent, pickLibrary, reopenLibrary } from "../local/libraries.js";
+import {
+  libraryAuthorized,
+  loadRecent,
+  pickLibrary,
+  reopenLibrary,
+} from "../local/libraries.js";
 import {
   renderInspector,
   renderNav,
@@ -46,6 +51,8 @@ import {
 
 const state = {
   catalog: null,
+  reopenCatalog: null,
+  openingCatalog: false,
   data: null,
   selected: null,
   selectedIds: new Set(),
@@ -66,7 +73,7 @@ const state = {
 const system = matchMedia("(prefers-color-scheme: dark)");
 const root = $("#app");
 const catalogPath = () =>
-  "/local/libraries/" + encodeURIComponent(state.catalog.id);
+  "/local/libraries/" + encodeURIComponent(state.catalog?.id ?? "");
 const resource = (id) => catalogPath() + "/resources/" + encodeURIComponent(id);
 const selected = () =>
   state.data?.groups
@@ -422,6 +429,8 @@ async function openCatalog(catalog) {
     "/local/libraries/" + encodeURIComponent(catalog.id),
   );
   state.catalog = { ...catalog, ...settings };
+  state.reopenCatalog = null;
+  state.hasCatalogEntries = true;
   catalog = state.catalog;
   state.data = null;
   const saved = loadWorkspace(catalog);
@@ -450,6 +459,43 @@ async function openCatalog(catalog) {
   theme();
   void run(intake.onOpen);
 }
+async function restoreCatalog(catalog, prompt = false) {
+  if (!catalog || state.openingCatalog) return;
+  if (!state.catalog) state.reopenCatalog = catalog;
+  state.openingCatalog = true;
+  renderResults(state, resource);
+  try {
+    await openCatalog(await reopenLibrary(catalog.id, prompt));
+  } catch (error) {
+    if (prompt || error.status !== 403) throw error;
+  } finally {
+    state.openingCatalog = false;
+    if (!state.catalog) renderResults(state, resource);
+  }
+}
+
+async function resumeCurrentLibrary() {
+  const current = state.catalog;
+  if (!current || state.openingCatalog || document.hidden) return;
+  const authorized = await libraryAuthorized(current.id);
+  if (state.catalog?.id !== current.id || document.hidden) return;
+  if (authorized) {
+    await intake.onOpen();
+    return;
+  }
+  ++revision;
+  clearTimeout(poll);
+  clearTimeout(searchTimer);
+  state.reopenCatalog = { id: current.id, title: current.title };
+  state.catalog = null;
+  state.data = null;
+  state.selected = null;
+  state.selectedIds.clear();
+  $("#results").inert = false;
+  $("#results").removeAttribute("aria-busy");
+  draw();
+}
+
 function createCatalog() {
   modal("New library", field("Name", "title", "", 'maxlength="80" required'), {
     submit: "Choose empty folder",
@@ -1010,6 +1056,7 @@ const commandLabels = {
   "copy-link": ["Copy library link", "copy"],
   "edit-markdown": ["Edit Markdown", "edit"],
   "rebuild-preview": ["Rebuild preview", "refresh"],
+  "capture-screenshot": ["Capture website screenshot", "image"],
 };
 const command = (action, label, icon, data) => ({
   label: label ?? commandLabels[action][0],
@@ -1037,6 +1084,7 @@ function resourceCommands(item, viewer) {
           },
           ...(item.markdown ? [forItem("edit-markdown")] : []),
           forItem("rebuild-preview"),
+          ...(item.type === "link" ? [forItem("capture-screenshot")] : []),
           forItem("move"),
           forItem("copy"),
           forItem("share-link"),
@@ -1271,6 +1319,7 @@ const actions = {
   },
   catalogs: chooseCatalog,
   "new-catalog": createCatalog,
+  "reopen-catalog": () => restoreCatalog(state.reopenCatalog, true),
   "pick-library": openPickedLibrary,
   folder: () => folderDialog(),
   view: viewDialog,
@@ -1336,6 +1385,14 @@ const actions = {
   },
   "rebuild-preview": async ({ path }) => {
     await request(resource(path) + "/preview/rebuild", { method: "POST" });
+    await browse();
+  },
+  "capture-screenshot": async ({ path }) => {
+    if (!navigator.onLine)
+      throw new Error("Connect to capture a website screenshot.");
+    await request(resource(path) + "/preview/rebuild?screenshot=1", {
+      method: "POST",
+    });
     await browse();
   },
   nav: () => togglePane("nav"),
@@ -1700,9 +1757,14 @@ $("#results").addEventListener("keydown", (event) => {
     quickLook(selected());
   }
 });
+document.addEventListener(
+  "visibilitychange",
+  () => void run(resumeCurrentLibrary),
+);
+window.addEventListener("pageshow", () => void run(resumeCurrentLibrary));
 void run(async () => {
   registerMediaCache();
-  const entries = await loadRecent();
+  const entries = await loadRecent(false);
   const linked = new URLSearchParams(location.search).get("library");
   const recent =
     linked || localStorage.getItem(storageKey("sourcebook:catalog"));
@@ -1710,5 +1772,5 @@ void run(async () => {
   state.catalogsLoaded = true;
   state.hasCatalogEntries = entries.length > 0;
   renderResults(state, resource);
-  if (catalog?.authorized) await openCatalog(await reopenLibrary(catalog.id));
+  await restoreCatalog(catalog);
 });

@@ -84,7 +84,7 @@ export async function request(
           ? library.relinkCandidates(id)
           : await mutate(() => library.relink(id, body.target));
     else if (action === "preview" && subaction === "rebuild")
-      void library.generate(id, true);
+      void library.generate(id, true, query.screenshot === "1");
     else if (action) {
       const data = await library.media(id, action, Number(query.page ?? 1));
       if (action === "text-preview") result = data;

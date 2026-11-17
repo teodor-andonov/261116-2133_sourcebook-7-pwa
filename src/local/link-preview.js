@@ -169,6 +169,13 @@ export async function lookupLink(address) {
   );
 }
 
+export function screenshotURL(address) {
+  const url = publicURL(address);
+  if (!url) return null;
+  url.hash = "";
+  return "https://image.thum.io/get/width/960/crop/650/noanimate/" + url.href;
+}
+
 async function loadImage(url, cors, milliseconds) {
   const image = new Image();
   image.referrerPolicy = "no-referrer";
@@ -193,12 +200,12 @@ async function loadImage(url, cors, milliseconds) {
   }
 }
 
-export async function chooseCover(covers) {
-  const deadline = performance.now() + 7000;
+export async function chooseCover(covers, timeout = 3500) {
+  const deadline = performance.now() + Math.max(7000, timeout);
   const load = (url, cors) => {
     const remaining = deadline - performance.now();
     return remaining > 0
-      ? loadImage(url, cors, Math.min(3500, remaining))
+      ? loadImage(url, cors, Math.min(timeout, remaining))
       : null;
   };
   for (const url of covers) {

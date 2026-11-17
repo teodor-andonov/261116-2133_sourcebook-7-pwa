@@ -18,6 +18,7 @@ import {
   chooseCover,
   linkTitle,
   lookupLink,
+  screenshotURL,
 } from "./link-preview.js";
 
 const idPattern = /^\d{6}-\d{6}-\d{4}$/;
@@ -86,57 +87,56 @@ export class Library {
 
   async open() {
     return this.write(async () => {
-      this.config = await this.files.json(settingsPath, {});
-      this.workspace = await this.files.json("settings/workspace.json", {});
-      await this.loadIndex();
-      for await (const [name, handle] of this.files.entries("staging")) {
-        if (handle.kind !== "file" || !name.endsWith(".job.json")) continue;
-        const job = JSON.parse(await (await handle.getFile()).text());
-        if (name === job.id + ".job.json") this.jobs.set(job.id, job);
-      }
+      [this.config, this.workspace] = await Promise.all([
+        this.files.json(settingsPath, {}),
+        this.files.json("settings/workspace.json", {}),
+        this.loadIndex(),
+        this.readStaging(true),
+      ]);
       for (const job of this.jobs.values())
         if (!finished(job) && !job.error && job.phase !== "awaiting-upload")
           await this.execute(job);
-      await this.scan();
+      await this.scan(false);
       for (const id of this.locations.keys())
         if (!this.ready.has(id)) this.generate(id);
     });
   }
 
   async loadIndex() {
-    const rows = new Map();
-    const ready = new Set();
-    for await (const [name, handle] of this.files.entries("metadata")) {
-      if (
-        handle.kind !== "file" ||
-        !name.endsWith(".json") ||
-        !idPattern.test(name.slice(0, -5))
-      )
-        continue;
-      const record = JSON.parse(await (await handle.getFile()).text());
-      if (record.id + ".json" === name) rows.set(record.id, record);
-    }
-    for await (const [name, handle] of this.files.entries("thumbnails")) {
-      if (handle.kind === "file" && name.endsWith(".webp"))
-        ready.add(name.slice(0, -5));
-    }
-    this.rows = rows;
-    this.ready = ready;
+    const [rows, thumbnails] = await Promise.all([
+      this.files.readEntries("metadata", async (name, handle) => {
+        if (
+          handle.kind !== "file" ||
+          !name.endsWith(".json") ||
+          !idPattern.test(name.slice(0, -5))
+        )
+          return;
+        const record = JSON.parse(await (await handle.getFile()).text());
+        if (record.id + ".json" === name) return [record.id, record];
+      }),
+      this.files.readEntries("thumbnails", (name, handle) => {
+        if (handle.kind === "file" && name.endsWith(".webp"))
+          return name.slice(0, -5);
+      }),
+    ]);
+    this.rows = new Map(rows.filter(Boolean));
+    this.ready = new Set(thumbnails.filter(Boolean));
   }
 
-  async *originals(folder = "") {
-    for await (const [name, handle] of this.files.entries(
-      folder ? "files/" + folder : "files",
-    )) {
+  async *originals(folder = "", directory) {
+    const entries = directory
+      ? directory.entries()
+      : this.files.entries("files");
+    for await (const [name, handle] of entries) {
       const path = [folder, name].filter(Boolean).join("/");
       if (handle.kind === "directory") {
         this.folders.add(path);
-        yield* this.originals(path);
+        yield* this.originals(path, handle);
       } else yield ["files/" + path, handle];
     }
   }
 
-  async scan() {
+  async scan(refreshInbox = true) {
     const found = new Map();
     const untracked = [];
     const owned = new Set();
@@ -185,14 +185,25 @@ export class Library {
         expected: file.size,
       });
     }
+    if (refreshInbox) await this.readStaging();
+  }
+
+  async readStaging(includeReceipts = false) {
+    const entries = await this.files.readEntries(
+      "staging",
+      async (name, handle) => {
+        if (handle.kind !== "file" || name.endsWith(".part")) return;
+        if (!name.endsWith(".job.json"))
+          return { item: { name, size: (await handle.getFile()).size } };
+        if (!includeReceipts) return;
+        const job = JSON.parse(await (await handle.getFile()).text());
+        if (name === job.id + ".job.json") return { job };
+      },
+    );
     this.inbox = [];
-    for await (const [name, handle] of this.files.entries("staging")) {
-      if (
-        handle.kind === "file" &&
-        !name.endsWith(".job.json") &&
-        !name.endsWith(".part")
-      )
-        this.inbox.push({ name, size: (await handle.getFile()).size });
+    for (const entry of entries.filter(Boolean)) {
+      if (entry.job) this.jobs.set(entry.job.id, entry.job);
+      else this.inbox.push(entry.item);
     }
   }
 
@@ -1162,11 +1173,11 @@ export class Library {
     await this.files.remove(job.source);
   }
 
-  generate(id, rebuild = false) {
+  generate(id, rebuild = false, screenshot = false) {
     if (!this.locations.has(id)) return Promise.resolve();
     const knownLink = this.row(id).link;
     if (rebuild && knownLink?.url && this.ready.has(id)) {
-      this.enrichLink(id, knownLink.url);
+      this.enrichLink(id, knownLink.url, screenshot);
       return this.linkQueue;
     }
     const pending = this.previewJobs.get(id);
@@ -1213,7 +1224,7 @@ export class Library {
           this.previewFailures.delete(id);
           this.previewTokens.set(id, (this.previewTokens.get(id) ?? 0) + 1);
         });
-        if (result.text?.url) this.enrichLink(id, result.text.url);
+        if (result.text?.url) this.enrichLink(id, result.text.url, screenshot);
       })
       .catch((error) => {
         if (this.rows.has(id)) this.previewFailures.add(id);
@@ -1239,14 +1250,23 @@ export class Library {
     });
   }
 
-  enrichLink(id, address) {
+  enrichLink(id, address, screenshot = false) {
     if (this.linkJobs.has(id) || globalThis.navigator?.onLine === false) return;
     this.linkJobs.add(id);
     this.linkQueue = this.linkQueue
       .then(async () => {
-        const result = await lookupLink(address);
-        if (!result || this.rows.get(id)?.link?.url !== address) return;
-        const { bitmap, cover } = await chooseCover(result.covers);
+        const result = screenshot
+          ? null
+          : await lookupLink(address).catch(() => null);
+        if (this.rows.get(id)?.link?.url !== address) return;
+        let image = result?.covers?.length
+          ? await chooseCover(result.covers)
+          : {};
+        const screenshotAddress = screenshotURL(address);
+        if (!image.bitmap && !image.cover && screenshotAddress)
+          image = await chooseCover([screenshotAddress], 12000);
+        const { bitmap, cover } = image;
+        if (!result && !bitmap && !cover) return;
         let derivatives;
         if (bitmap) {
           try {
@@ -1271,11 +1291,11 @@ export class Library {
           const details = {
             ...row.link,
             title:
-              (typeof result.title === "string" && result.title.trim()) ||
+              (typeof result?.title === "string" && result.title.trim()) ||
               row.link.title,
             cover: derivatives ? undefined : (cover ?? row.link.cover),
             hasCover: Boolean(derivatives || row.link.hasCover),
-            favicon: result.favicon?.startsWith("https://")
+            favicon: result?.favicon?.startsWith("https://")
               ? result.favicon
               : row.link.favicon,
           };

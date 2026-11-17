@@ -78,7 +78,11 @@ export function intakeController({ state, browse, status, redraw }) {
       await deleteDraft(draft.id);
       return true;
     } catch (error) {
-      await putDraft({ ...draft, error: error.message });
+      await putDraft({
+        ...draft,
+        error: error.message,
+        needsAccess: error.name === "NotAllowedError" || error.status === 403,
+      });
       return false;
     }
   }
@@ -137,7 +141,7 @@ export function intakeController({ state, browse, status, redraw }) {
     for (const draft of await readDrafts()) {
       if (
         draft.kind === "composer" ||
-        draft.error ||
+        (draft.error && !draft.needsAccess) ||
         (draft.catalog && draft.catalog !== state.catalog?.id)
       )
         continue;

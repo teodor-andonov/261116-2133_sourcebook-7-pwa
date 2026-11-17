@@ -15,7 +15,7 @@ To try installation, sharing or offline launch, run `npm run build` and then `np
 
 ## Open a library
 
-- **New library** initializes an empty folder. **Open library** attaches a Sourcebook 7 folder. Use the library button in the sidebar to switch or reauthorize access.
+- **New library** initializes an empty folder. **Open library** attaches a Sourcebook 7 folder. Use the library button in the sidebar to switch. If the browser asks for permission again, use **Reopen** to grant access to the last library and resume queued shares.
 - Add files from Sourcebook, or put them in `files/` and click **Refresh** to assign IDs in place. Files copied to `staging/` appear in **Drop Inbox** after Refresh and can be processed into a folder.
 - For an external move, leave the timestamp filename and extension intact and click **Refresh**. If the filename changed, find the missing entry under **Needs attention** and use **Relink original** after Refresh adopts the renamed file.
 - Paste a web address to save it as a plain-text `.link` file containing a Markdown autolink. Quick Look shows the address offline, and following it opens a browser tab. Use **Retry** in **Needs attention** to recover failed Windows shortcuts that contain an HTTP or HTTPS address.
@@ -42,4 +42,4 @@ See [status](docs/status.md) for the latest verification.
 
 ## Saved link previews
 
-Sourcebook saves pasted or dropped addresses locally first. With a connection, it looks up public page titles and covers using Defuddle. YouTube videos use YouTube’s title endpoint and thumbnail. The app shows the page title and domain, keeps a compact card when no cover is available, and stores covers that the image host lets it read. Other cover images can display while online. Defuddle receives the public URL for lookup. Use **Rebuild preview** to enrich an existing link or retry an unavailable cover.
+Sourcebook saves pasted or dropped addresses locally first. With a connection, it looks up public page titles and covers using Defuddle. YouTube videos use YouTube’s title endpoint and thumbnail. The app shows the page title and domain, keeps a compact card when no cover is available, and stores covers that the image host lets it read. Other cover images can display while online. Thum.io supplies a screenshot when a public link has no usable cover. Use **Capture website screenshot** to request one directly or **Rebuild preview** to try the normal lookup again. Defuddle and Thum.io receive the public URL when used.

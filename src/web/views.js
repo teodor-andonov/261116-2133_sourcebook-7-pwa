@@ -98,7 +98,13 @@ export function renderResults(state, resource) {
     Math.max(1, state.properties.length),
   );
   if (!catalog) {
-    host.innerHTML = `<div class="welcome">${icon("library")}<h2>Sourcebook</h2>${!state.catalogsLoaded ? "<p>Loading libraries…</p>" : `<div class="welcome-actions"><button type="button" data-action="${state.hasCatalogEntries ? "catalogs" : "pick-library"}">Open library</button><button type="button" class="primary" data-action="new-catalog">New library</button></div>`}</div>`;
+    const reopen = state.reopenCatalog;
+    const content = !state.catalogsLoaded
+      ? "<p>Loading libraries…</p>"
+      : state.openingCatalog
+        ? `<p role="status">Opening ${e(reopen?.title ?? "library")}…</p>`
+        : `<div class="welcome-actions">${reopen ? `<button type="button" class="primary" data-action="reopen-catalog">Reopen ${e(reopen.title)}</button>` : ""}<button type="button" data-action="${state.hasCatalogEntries ? "catalogs" : "pick-library"}">Open library</button><button type="button" ${reopen ? "" : 'class="primary"'} data-action="new-catalog">New library</button></div>`;
+    host.innerHTML = `<div class="welcome">${icon("library")}<h2>Sourcebook</h2>${content}</div>`;
     return;
   }
   if (!data) return;

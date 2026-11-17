@@ -100,6 +100,26 @@ export class LibraryFiles {
   async *entries(path) {
     yield* (await this.directory(path)).entries();
   }
+
+  async readEntries(path, read) {
+    let batch = [];
+    const results = [];
+    for await (const [name, handle] of this.entries(path)) {
+      batch.push([name, handle]);
+      if (batch.length === 16) {
+        results.push(
+          ...(await Promise.all(
+            batch.map(([name, handle]) => read(name, handle)),
+          )),
+        );
+        batch = [];
+      }
+    }
+    results.push(
+      ...(await Promise.all(batch.map(([name, handle]) => read(name, handle)))),
+    );
+    return results;
+  }
 }
 
 export async function equalBytes(left, right) {
