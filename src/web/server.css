@@ -495,4 +495,107 @@ dialog.server-preview.fullscreen-viewer {
   max-height: calc(100dvh - 12px);
   overflow: auto;
 }
-.local-html-preview { width: 100%; min-height: 340px; border: 0; background: #fff; }
+.local-html-preview {
+  width: 100%;
+  min-height: 340px;
+  border: 0;
+  background: #fff;
+}
+
+.pending-imports {
+  margin-block-end: 10px;
+}
+.pending-import-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, var(--card-size)), 1fr)
+  );
+  gap: 7px;
+}
+.pending-import-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 5px 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px dashed currentColor;
+  border-radius: 6px;
+}
+.pending-import-card > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pending-import-card > small {
+  grid-column: 2;
+  opacity: 0.7;
+}
+.thumbnail .link-identity,
+.thumbnail .preview-progress {
+  position: absolute;
+  z-index: 1;
+  inset-inline-start: 6px;
+}
+.link-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #27282d;
+  color: #f4f5f9;
+  font-size: 11px;
+  max-width: calc(100% - 12px);
+}
+.link-identity > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.thumbnail .link-identity {
+  inset-block-start: 6px;
+}
+.thumbnail .preview-progress {
+  inset-block-end: 6px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  background: #27282d;
+  color: #f4f5f9;
+}
+.link-identity .link-favicon,
+.server-items .thumbnail .link-favicon {
+  inline-size: 13px;
+  block-size: 13px;
+  object-fit: contain;
+  position: static;
+}
+.link-identity:has(.link-favicon:not([hidden])) svg {
+  display: none;
+}
+.server-items .thumbnail .link-favicon[hidden],
+.link-cover[hidden],
+.link-favicon[hidden] {
+  display: none;
+}
+.link-quick-look {
+  width: min(100%, 780px);
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 12px;
+}
+.link-quick-look .link-cover {
+  display: block;
+  max-inline-size: 100%;
+  max-block-size: 58vh;
+  object-fit: contain;
+}
+.link-quick-look .link-cover[hidden] {
+  display: none;
+}
+.link-quick-look > a {
+  overflow-wrap: anywhere;
+}

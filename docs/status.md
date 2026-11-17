@@ -11,3 +11,5 @@ For a local trial, use **Open library** on the [disposable test library](../../.
 [Plain-text link capture](sessions/261116-2225_plain-text-links.md)
 
 [Recovery of failed shortcut drafts](sessions/261117-0016_link-draft-recovery.md)
+
+[Batch capture and link previews](sessions/261117-0034_batch-link-previews.md)

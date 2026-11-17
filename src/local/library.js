@@ -13,6 +13,12 @@ import {
   Problem,
 } from "./files.js";
 import { makeDerivatives } from "./previews.js";
+import {
+  basicLink,
+  chooseCover,
+  linkTitle,
+  lookupLink,
+} from "./link-preview.js";
 
 const idPattern = /^\d{6}-\d{6}-\d{4}$/;
 const settingsPath = "settings/catalog.json";
@@ -60,6 +66,8 @@ export class Library {
     this.inbox = [];
     this.ready = new Set();
     this.previewJobs = new Map();
+    this.linkJobs = new Set();
+    this.linkQueue = Promise.resolve();
     this.previewFailures = new Set();
     this.previewQueue = Promise.resolve();
     this.queue = Promise.resolve();
@@ -351,13 +359,15 @@ export class Library {
       previewVersion: String(row.contentRevision),
       previewToken: String(this.previewTokens?.get(row.id) ?? ""),
       preview: available && this.ready.has(row.id),
-      previewStatus: this.previewJobs.has(row.id)
-        ? "pending"
-        : this.previewFailures.has(row.id)
-          ? "failed"
-          : this.ready.has(row.id)
-            ? "ready"
-            : "",
+      link: row.link,
+      previewStatus:
+        this.previewJobs.has(row.id) || this.linkJobs.has(row.id)
+          ? "pending"
+          : this.previewFailures.has(row.id)
+            ? "failed"
+            : this.ready.has(row.id)
+              ? "ready"
+              : "",
       markdown: isMarkdown(row.originalName) && row.size <= markdownLimit,
     };
   }
@@ -376,7 +386,7 @@ export class Library {
           return row ? [this.presentation(row)] : [];
         }) ?? [],
       jobs: this.pendingJobs(),
-      previewPending: this.previewJobs.size > 0,
+      previewPending: this.previewJobs.size > 0 || this.linkJobs.size > 0,
     };
   }
 
@@ -472,7 +482,7 @@ export class Library {
           !this.pendingJobs().some((job) => job.source === "staging/" + name),
       ),
       jobs: this.pendingJobs(),
-      previewPending: this.previewJobs.size > 0,
+      previewPending: this.previewJobs.size > 0 || this.linkJobs.size > 0,
     };
   }
 
@@ -1154,6 +1164,11 @@ export class Library {
 
   generate(id, rebuild = false) {
     if (!this.locations.has(id)) return Promise.resolve();
+    const knownLink = this.row(id).link;
+    if (rebuild && knownLink?.url && this.ready.has(id)) {
+      this.enrichLink(id, knownLink.url);
+      return this.linkQueue;
+    }
     const pending = this.previewJobs.get(id);
     if (
       pending &&
@@ -1179,6 +1194,14 @@ export class Library {
               if (name.startsWith(id + "-p"))
                 await this.files.remove("previews/" + name);
           }
+          const address = result.text?.url;
+          if (address) {
+            const current = this.row(id);
+            if (current.link?.url !== address) {
+              const basic = basicLink(address, current.originalName);
+              await this.saveLinkDetails(current, { ...basic, url: address });
+            }
+          }
           await this.files.write(preview(id), result.image);
           await this.files.write(thumbnail(id), result.thumbnail);
           await this.files.writeJSON(textPreview(id), {
@@ -1190,6 +1213,7 @@ export class Library {
           this.previewFailures.delete(id);
           this.previewTokens.set(id, (this.previewTokens.get(id) ?? 0) + 1);
         });
+        if (result.text?.url) this.enrichLink(id, result.text.url);
       })
       .catch((error) => {
         if (this.rows.has(id)) this.previewFailures.add(id);
@@ -1201,6 +1225,69 @@ export class Library {
       if (this.previewJobs.get(id)?.task === task) this.previewJobs.delete(id);
     });
     return task;
+  }
+
+  async saveLinkDetails(row, details) {
+    const automaticTitle = linkTitle(details);
+    const useAutomaticTitle =
+      row.title === (row.link?.automaticTitle ?? row.originalName);
+    await this.saveRow({
+      ...row,
+      title: useAutomaticTitle ? automaticTitle : row.title,
+      link: { ...details, automaticTitle },
+      revision: row.revision + 1,
+    });
+  }
+
+  enrichLink(id, address) {
+    if (this.linkJobs.has(id) || globalThis.navigator?.onLine === false) return;
+    this.linkJobs.add(id);
+    this.linkQueue = this.linkQueue
+      .then(async () => {
+        const result = await lookupLink(address);
+        if (!result || this.rows.get(id)?.link?.url !== address) return;
+        const { bitmap, cover } = await chooseCover(result.covers);
+        let derivatives;
+        if (bitmap) {
+          try {
+            const original = await this.original(id);
+            derivatives = await makeDerivatives(
+              original,
+              this.row(id).originalName,
+              1,
+              bitmap,
+            );
+          } finally {
+            bitmap.close();
+          }
+        }
+        await this.write(async () => {
+          const row = this.rows.get(id);
+          if (row?.link?.url !== address) return;
+          if (derivatives) {
+            await this.files.write(preview(id), derivatives.image);
+            await this.files.write(thumbnail(id), derivatives.thumbnail);
+          }
+          const details = {
+            ...row.link,
+            title:
+              (typeof result.title === "string" && result.title.trim()) ||
+              row.link.title,
+            cover: derivatives ? undefined : (cover ?? row.link.cover),
+            hasCover: Boolean(derivatives || row.link.hasCover),
+            favicon: result.favicon?.startsWith("https://")
+              ? result.favicon
+              : row.link.favicon,
+          };
+          await this.saveLinkDetails(row, details);
+          this.previewTokens ??= new Map();
+          this.previewTokens.set(id, (this.previewTokens.get(id) ?? 0) + 1);
+        });
+      })
+      .catch(() => {
+        /* The local link card remains usable. */
+      })
+      .finally(() => this.linkJobs.delete(id));
   }
 
   async media(id, kind, page = 1) {

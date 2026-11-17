@@ -7,7 +7,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const inField = (element) =>
   element.closest("input, textarea, select, [contenteditable], dialog");
 
-export function intakeController({ state, browse, status }) {
+export function intakeController({ state, browse, status, redraw }) {
   const active = new Map();
   const base = (catalog) => "/local/libraries/" + encodeURIComponent(catalog);
 
@@ -85,22 +85,39 @@ export function intakeController({ state, browse, status }) {
 
   async function queue(files, options = {}) {
     const { makeDraft, putDraft } = await storage();
-    const drafts = [];
-    for (const file of files) {
-      const draft = { ...makeDraft(file, state.catalog?.id), ...options };
-      await putDraft(draft);
-      drafts.push(draft);
-    }
-    if (state.catalog && drafts.length > 1) {
-      try {
-        await prepareUploads(state.catalog.id, drafts);
-      } catch {
-        /* Each retained draft can still be attempted separately. */
-      }
-    }
+    const catalog = state.catalog?.id;
+    const drafts = files.map((file) => ({
+      ...makeDraft(file, catalog),
+      ...options,
+    }));
+    for (const draft of drafts) state.importing.set(draft.id, draft);
+    redraw();
     let completed = 0;
-    for (const draft of drafts) if (await send(draft)) completed++;
-    if (state.catalog) await browse();
+    try {
+      for (const draft of drafts) await putDraft(draft);
+      if (catalog && drafts.length > 1) {
+        try {
+          await prepareUploads(catalog, drafts);
+        } catch {
+          /* Each retained draft can still be attempted separately. */
+        }
+      }
+      let lastDraw = 0;
+      for (const draft of drafts) {
+        if (await send(draft)) completed++;
+        state.importing.delete(draft.id);
+        const now = performance.now();
+        if (catalog && state.catalog?.id === catalog && now - lastDraw >= 120) {
+          lastDraw = now;
+          await browse({ background: true });
+        }
+      }
+    } finally {
+      for (const draft of drafts) state.importing.delete(draft.id);
+      if (catalog && state.catalog?.id === catalog)
+        await browse({ background: true });
+      else redraw();
+    }
     if (drafts.length)
       toast(
         completed === drafts.length
@@ -312,13 +329,18 @@ export function intakeController({ state, browse, status }) {
         return;
       event.preventDefault();
       const data = event.dataTransfer;
-      void run(() =>
-        capture({
-          text: data.getData("text/plain"),
-          uriList: data.getData("text/uri-list"),
-          files: [...data.files],
-        }),
-      );
+      const files = data.files.length
+        ? [...data.files]
+        : [...data.items]
+            .filter((item) => item.kind === "file")
+            .map((item) => item.getAsFile())
+            .filter(Boolean);
+      const input = {
+        text: data.getData("text/plain"),
+        uriList: data.getData("text/uri-list"),
+        files,
+      };
+      void run(() => capture(input));
     });
     globalThis.launchQueue?.setConsumer(({ files }) => {
       if (files?.length)

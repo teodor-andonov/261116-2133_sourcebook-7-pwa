@@ -213,11 +213,31 @@ export function openViewer({
           link.textContent = data.url;
           link.target = "_blank";
           link.rel = "noopener noreferrer";
-          publish(link);
-          if (data.title) {
-            const title = document.createElement("h3");
-            title.textContent = data.title;
-            target.prepend(title);
+          const card = document.createElement("div");
+          card.className = "link-quick-look";
+          const identity = document.createElement("span");
+          identity.className = "link-identity";
+          identity.innerHTML = icon("link");
+          identity.append(item.link?.domain || new URL(data.url).hostname);
+          if (item.link?.favicon && navigator.onLine) {
+            const favicon = document.createElement("img");
+            favicon.className = "link-favicon";
+            favicon.alt = "";
+            favicon.referrerPolicy = "no-referrer";
+            favicon.src = item.link.favicon;
+            identity.append(favicon);
+          }
+          card.append(identity, link);
+          publish(card);
+          if (item.link?.hasCover || (item.link?.cover && navigator.onLine)) {
+            const cover = document.createElement("img");
+            cover.className = "link-cover";
+            cover.alt = "";
+            cover.referrerPolicy = "no-referrer";
+            if (item.link.cover && navigator.onLine)
+              cover.src = item.link.cover;
+            else cover.src = (await blobUrl(endpoint + "/preview", signal)).url;
+            if (!signal.aborted) card.insertBefore(cover, link);
           }
         } else if (typeof data.text === "string") {
           const { textPreview } = await import("./text-preview.js");

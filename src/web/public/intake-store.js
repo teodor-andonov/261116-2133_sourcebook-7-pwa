@@ -66,12 +66,21 @@ export function captureEntries({
   title = "",
 } = {}) {
   const trimmed = text.trim();
-  const prose = trimmed && !/^https?:\/\/\S+$/i.test(trimmed);
-  const direct = (prose ? "" : uriList)
+  const lines = trimmed
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const direct = uriList
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#"));
-  const possible = text.trim() || (files.length === 1 ? files[0].name : "");
+  const possible = trimmed || (files.length === 1 ? files[0].name : "");
+  if (
+    !direct.length &&
+    lines.length &&
+    lines.every((line) => /^https?:\/\/\S+$/i.test(line))
+  )
+    direct.push(...lines);
   if (!direct.length && /^https?:\/\/\S+$/i.test(possible))
     direct.push(possible);
   const links = [
@@ -113,10 +122,13 @@ export function captureEntries({
       !links.length ||
       (!/\.(url|download)$/i.test(file.name) && file.name !== possible),
   );
-  if (links.length && realFiles.length === 0)
-    return links.map((link) =>
-      linkFile(link, name || new URL(link).hostname || "Link"),
-    );
+  if (links.length)
+    return [
+      ...realFiles,
+      ...links.map((link) =>
+        linkFile(link, name || new URL(link).hostname || "Link"),
+      ),
+    ];
   if (realFiles.length) return realFiles;
   if (!trimmed) return [];
   const file = new File([text], (name || date) + ".md", {

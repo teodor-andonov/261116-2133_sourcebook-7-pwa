@@ -22,9 +22,18 @@ const propertyLabels = {
 };
 
 function fileItem(row, state, resource) {
+  const link = row.link;
+  const remoteCover = link?.cover && navigator.onLine;
+  const localThumb = row.preview && (!link || link.hasCover);
+  const identity = link
+    ? `<span class="link-identity">${icon("link")}${link.favicon && navigator.onLine ? `<img class="link-favicon" src="${e(link.favicon)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ""}<span>${e(link.domain)}</span></span>`
+    : "";
   const thumb = `<span class="thumbnail ${row.preview ? "has-preview" : ""}" >
-    ${state.catalog?.fileBadge !== false ? `<span class="file-type-badge" aria-hidden="true">${icon(row.icon)}${e(row.extension?.toUpperCase() || "")}</span>` : ""}
-    ${row.preview ? `<img loading="lazy" decoding="async" alt="" data-thumbnail="${resource(row.id)}/thumbnail?v=${e(row.previewVersion)}&r=${e(row.previewToken || "")}">` : ""}
+    ${!link && state.catalog?.fileBadge !== false ? `<span class="file-type-badge" aria-hidden="true">${icon(row.icon)}${e(row.extension?.toUpperCase() || "")}</span>` : ""}
+    ${localThumb ? `<img loading="lazy" decoding="async" alt="" data-thumbnail="${resource(row.id)}/thumbnail?v=${e(row.previewVersion)}&r=${e(row.previewToken || "")}">` : ""}
+    ${remoteCover ? `<img class="link-cover" src="${e(link.cover)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ""}
+    ${identity}
+    ${row.previewStatus === "pending" ? '<span class="preview-progress">Preparing preview…</span>' : ""}
     ${!row.available ? `<span class="availability" title="Original missing">${icon("alert")}</span>` : ""}
   </span>`;
   const active = state.selectedIds.has(row.id);
@@ -104,8 +113,15 @@ export function renderResults(state, resource) {
     where.scope === "folder" && !state.search
       ? data.folders.filter(({ parent }) => parent === where.folder)
       : [];
+  const imports = [...state.importing.values()].filter(
+    (draft) => draft.catalog === catalog.id,
+  );
+  const importing = imports.length
+    ? `<section class="pending-imports" aria-label="Importing files"><div class="pending-import-grid">${imports.map(({ file }) => `<div class="pending-import-card">${icon("file")}<span title="${e(file.name)}">${e(file.name)}</span><small>Importing…</small></div>`).join("")}</div></section>`
+    : "";
   const previousFolderHeight =
-    host.querySelector(".folder-grid")?.offsetHeight ?? 0;
+    (host.querySelector(".folder-grid")?.offsetHeight ?? 0) +
+    (host.querySelector(".pending-imports")?.offsetHeight ?? 0);
   const fixedHeader =
     previousFolderHeight + (state.mode === "table" ? 30 : 0) + 6;
   const window = resultWindow(host, state, fixedHeader);
@@ -116,14 +132,15 @@ export function renderResults(state, resource) {
   }
   reconcileResults(
     host,
-    (children.length
-      ? `<div class="folder-grid">${children
-          .map(
-            ({ path, name }) =>
-              `<button type="button" data-nav="folder" data-path="${e(path)}">${icon("folder")}<span>${e(name)}</span></button>`,
-          )
-          .join("")}</div>`
-      : "") +
+    importing +
+      (children.length
+        ? `<div class="folder-grid">${children
+            .map(
+              ({ path, name }) =>
+                `<button type="button" data-nav="folder" data-path="${e(path)}">${icon("folder")}<span>${e(name)}</span></button>`,
+            )
+            .join("")}</div>`
+        : "") +
       (state.mode === "table" && data.count && state.properties.length
         ? `<div class="table-header"><span></span>${state.properties.map((key) => `<span>${propertyLabels[key]}</span>`).join("")}</div>`
         : "") +
@@ -137,7 +154,7 @@ export function renderResults(state, resource) {
       (data.next !== null
         ? '<button type="button" class="load-more-results" data-action="load-more">Load more files</button>'
         : "") +
-      (!data.count && !children.length
+      (!data.count && !children.length && !imports.length
         ? `<div class="empty-small">${icon("file")}<p>${state.search ? "No matching files." : "No files here."}</p></div>`
         : ""),
   );

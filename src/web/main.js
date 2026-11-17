@@ -48,6 +48,7 @@ const state = {
   data: null,
   selected: null,
   selectedIds: new Set(),
+  importing: new Map(),
   where: { scope: "all" },
   ...viewDefaults,
   folded: new Set(),
@@ -88,7 +89,12 @@ let statusRequest;
 let nextRequest;
 let searchTimer;
 let tagFilter;
-const intake = intakeController({ state, catalogPath, browse, status });
+const intake = intakeController({
+  state,
+  browse,
+  status,
+  redraw: () => renderResults(state, resource),
+});
 
 function theme() {
   const choice = state.catalog?.theme || "system";
@@ -333,13 +339,24 @@ async function checkActivity() {
     for (const { rows } of state.data.groups) {
       for (const row of rows) {
         const update = changed.get(row.id);
-        if (update && row.previewStatus !== update.previewStatus) {
+        if (
+          update &&
+          (row.previewStatus !== update.previewStatus ||
+            row.previewToken !== update.previewToken ||
+            row.title !== update.title)
+        ) {
           Object.assign(row, update);
           redraw = true;
         }
       }
     }
+    const previewsSettled =
+      state.data.previewPending && !activity.previewPending;
     state.data.previewPending = activity.previewPending;
+    if (previewsSettled) {
+      await browse({ background: true });
+      return;
+    }
     if (redraw) renderResults(state, resource);
     if (activity.previewPending || activity.jobs.some(({ error }) => !error))
       scheduleActivity();
@@ -1459,6 +1476,14 @@ root.addEventListener("dragend", () => {
   treeDrag = undefined;
   $(".tree-drop")?.classList.remove("tree-drop", "tree-before");
 });
+root.addEventListener(
+  "error",
+  (event) => {
+    if (event.target.matches?.(".link-cover, .link-favicon"))
+      event.target.hidden = true;
+  },
+  true,
+);
 root.addEventListener("dragstart", files.dragstart);
 root.addEventListener("dragend", files.dragend);
 root.addEventListener("dragover", files.dragover);

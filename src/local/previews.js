@@ -56,9 +56,10 @@ async function videoFrame(file) {
   }
 }
 
-export async function makeDerivatives(file, name, page = 1) {
+export async function makeDerivatives(file, name, page = 1, cover) {
   const frame =
-    describeFile(name).type === "video" ? await videoFrame(file) : undefined;
+    cover ??
+    (describeFile(name).type === "video" ? await videoFrame(file) : undefined);
   return new Promise((resolve, reject) => {
     const id = ++sequence;
     pending.set(id, { resolve, reject });

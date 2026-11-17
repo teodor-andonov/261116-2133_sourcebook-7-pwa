@@ -38,8 +38,12 @@ export function reconcileResults(host, markup) {
             oldItem.style.height = newItem.style.height;
             return true;
           }
-          const oldImage = oldItem.querySelector(".thumbnail img");
-          const newImage = newItem.querySelector(".thumbnail img");
+          const oldImage = oldItem.querySelector(
+            ".thumbnail img[data-thumbnail]",
+          );
+          const newImage = newItem.querySelector(
+            ".thumbnail img[data-thumbnail]",
+          );
           if (
             oldImage &&
             newImage?.dataset.thumbnail === oldImage.dataset.thumbnail

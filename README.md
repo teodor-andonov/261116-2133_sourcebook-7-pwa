@@ -35,3 +35,7 @@ To try installation, sharing or offline launch, run `npm run build` and then `np
 The folder is the library. Browser storage keeps folder permissions and temporary drafts. Current library format is **1**. Only open existing Sourcebook 7 libraries with this app.
 
 See [status](docs/status.md) for the latest verification.
+
+## Saved link previews
+
+Sourcebook saves pasted or dropped addresses locally first. With a connection, it looks up public page titles and covers using Defuddle. YouTube videos use YouTube’s title endpoint and thumbnail. The app shows the page title and domain, keeps a compact card when no cover is available, and stores covers that the image host lets it read. Other cover images can display while online. Defuddle receives the public URL for lookup. Use **Rebuild preview** to enrich an existing link or retry an unavailable cover.
