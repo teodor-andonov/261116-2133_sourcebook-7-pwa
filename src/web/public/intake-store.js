@@ -1,8 +1,11 @@
 let database;
+const appPath = new URL("./", import.meta.url).pathname;
+const databaseName =
+  appPath === "/" ? "sourcebook-7-intake" : "sourcebook-7-intake:" + appPath;
 
 function open() {
   database ??= new Promise((resolve, reject) => {
-    const request = indexedDB.open("sourcebook-7-intake", 1);
+    const request = indexedDB.open(databaseName, 1);
     request.onupgradeneeded = () =>
       request.result.createObjectStore("drafts", { keyPath: "id" });
     request.onsuccess = () => resolve(request.result);

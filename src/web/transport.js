@@ -1,5 +1,6 @@
 import { libraryFor } from "../local/libraries.js";
 import { Problem } from "../local/files.js";
+import { appBase } from "../local/app-location.js";
 
 function command(path) {
   const url = new URL(path, location.origin);
@@ -151,7 +152,7 @@ export function fileLink(path) {
     library,
     parts: [, id],
   } = command(path);
-  const url = new URL("/", location.origin);
+  const url = new URL(appBase, location.origin);
   url.searchParams.set("library", library.info.id);
   url.searchParams.set("file", id);
   return url.href;

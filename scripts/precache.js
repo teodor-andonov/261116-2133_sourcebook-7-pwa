@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 import { cp, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { appBase } from "./deployment-base.js";
+
+const manifestPath = "dist/sourcebook.webmanifest";
+const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+manifest.id = appBase;
+await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 
 for (const folder of ["cmaps", "standard_fonts", "wasm", "iccs"])
   await cp(
@@ -32,8 +38,6 @@ await writeFile(
     "export const version = " +
       JSON.stringify(hash.digest("hex").slice(0, 16)) +
       ";",
-    "export const assets = " +
-      JSON.stringify(entries.map((entry) => "/" + entry)) +
-      ";",
+    "export const assets = " + JSON.stringify(entries) + ";",
   ].join("\n"),
 );

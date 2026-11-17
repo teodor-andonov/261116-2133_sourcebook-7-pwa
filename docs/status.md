@@ -13,3 +13,5 @@ For a local trial, use **Open library** on the [disposable test library](../../.
 [Recovery of failed shortcut drafts](sessions/261117-0016_link-draft-recovery.md)
 
 [Batch capture and link previews](sessions/261117-0034_batch-link-previews.md)
+
+[GitHub Pages deployment](sessions/261117-0050_github-pages.md)

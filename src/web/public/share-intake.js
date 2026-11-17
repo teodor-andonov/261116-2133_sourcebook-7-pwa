@@ -1,6 +1,6 @@
 import { captureEntries, makeDraft, putDraft } from "./intake-store.js";
 
-export async function receiveShare(request) {
+export async function receiveShare(request, scope) {
   const origin = request.headers.get("Origin");
   if (
     (origin && origin !== self.location.origin) ||
@@ -24,11 +24,8 @@ export async function receiveShare(request) {
       title,
     });
     for (const file of entries) await putDraft(makeDraft(file));
-    return Response.redirect(new URL("/?shared=1", self.location.origin), 303);
+    return Response.redirect(new URL("?shared=1", scope), 303);
   } catch {
-    return Response.redirect(
-      new URL("/?share-error=1", self.location.origin),
-      303,
-    );
+    return Response.redirect(new URL("?share-error=1", scope), 303);
   }
 }

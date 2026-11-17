@@ -1,5 +1,6 @@
 import { LibraryFiles, Problem } from "./files.js";
 import { Library } from "./library.js";
+import { storageKey } from "./app-location.js";
 
 const layout = [
   "files",
@@ -16,7 +17,7 @@ let database;
 
 async function registry(mode, change) {
   database ??= new Promise((resolve, reject) => {
-    const request = indexedDB.open("sourcebook-libraries", 1);
+    const request = indexedDB.open(storageKey("sourcebook-libraries"), 1);
     request.onupgradeneeded = () =>
       request.result.createObjectStore("libraries", { keyPath: "id" });
     request.onsuccess = () => resolve(request.result);

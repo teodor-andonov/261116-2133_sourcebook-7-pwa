@@ -20,6 +20,7 @@ import { openViewer } from "./viewer.js";
 import { fileActions } from "./file-actions.js";
 import { propertiesEditor } from "./properties.js";
 import { intakeController } from "./intake.js";
+import { appBase, storageKey } from "../local/app-location.js";
 import "./style.css";
 import "./server.css";
 import {
@@ -436,7 +437,7 @@ async function openCatalog(catalog) {
     ? saved.history
     : [{ mode: catalog.mode }];
   state.historyAt = Math.min(saved.historyAt ?? 0, state.history.length - 1);
-  localStorage.setItem("sourcebook:catalog", catalog.id);
+  localStorage.setItem(storageKey("sourcebook:catalog"), catalog.id);
   $("#results").replaceChildren();
   const params = new URLSearchParams(location.search);
   const file = params.get("library") === catalog.id ? params.get("file") : null;
@@ -445,7 +446,7 @@ async function openCatalog(catalog) {
       ? { selected: file, selectedIds: [file] }
       : state.history[state.historyAt],
   );
-  if (file) history.replaceState(null, "", "/");
+  if (file) history.replaceState(null, "", appBase);
   theme();
   void run(intake.onOpen);
 }
@@ -1703,7 +1704,8 @@ void run(async () => {
   registerMediaCache();
   const entries = await loadRecent();
   const linked = new URLSearchParams(location.search).get("library");
-  const recent = linked || localStorage.getItem("sourcebook:catalog");
+  const recent =
+    linked || localStorage.getItem(storageKey("sourcebook:catalog"));
   const catalog = entries.find(({ id }) => id === recent) ?? entries[0];
   state.catalogsLoaded = true;
   state.hasCatalogEntries = entries.length > 0;

@@ -1,4 +1,5 @@
 import { request } from "./transport.js";
+import { appBase } from "../local/app-location.js";
 
 const worker = navigator.serviceWorker;
 const active = new Map();
@@ -48,7 +49,10 @@ export function registerMediaCache() {
     worker.addEventListener("controllerchange", ready, { once: true });
   }
   void worker
-    .register("/sourcebook-worker.js", { type: "module" })
+    .register(appBase + "sourcebook-worker.js", {
+      type: "module",
+      scope: appBase,
+    })
     .catch((error) => {
       if (status) status.textContent = "Offline setup failed";
       console.warn("Offline setup failed:", error);

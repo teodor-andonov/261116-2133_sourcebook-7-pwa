@@ -1,7 +1,7 @@
 import { $, escape as e, field, modal, toast } from "./dom.js";
 import { json, prepareUploads, request, upload } from "./transport.js";
 
-const storageModule = "/intake-store.js";
+const storageModule = import.meta.env.BASE_URL + "intake-store.js";
 const storage = () => import(/* @vite-ignore */ storageModule);
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const inField = (element) =>

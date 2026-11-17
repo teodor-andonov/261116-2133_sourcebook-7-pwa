@@ -75,16 +75,19 @@ async function readText(file, type) {
 
 async function renderPDF(file, page) {
   const { getDocument } = await pdf();
-  const origin = globalThis.location.origin;
+  const assets = new URL(
+    import.meta.env.BASE_URL + "pdf/",
+    globalThis.location.origin,
+  );
   const task = getDocument({
     data: new Uint8Array(await file.arrayBuffer()),
     isEvalSupported: false,
     useSystemFonts: true,
     useWorkerFetch: true,
     cMapPacked: true,
-    cMapUrl: origin + "/pdf/cmaps/",
-    standardFontDataUrl: origin + "/pdf/standard_fonts/",
-    wasmUrl: origin + "/pdf/wasm/",
+    cMapUrl: new URL("cmaps/", assets).href,
+    standardFontDataUrl: new URL("standard_fonts/", assets).href,
+    wasmUrl: new URL("wasm/", assets).href,
   });
   try {
     const doc = await task.promise;

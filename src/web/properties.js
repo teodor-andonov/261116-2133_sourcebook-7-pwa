@@ -1,6 +1,7 @@
 import { $ } from "./dom.js";
 import { writeResources } from "./resource-writes.js";
 import { json } from "./transport.js";
+import { storageKey } from "../local/app-location.js";
 
 function fields(form) {
   return {
@@ -18,7 +19,7 @@ export function propertiesEditor({
 }) {
   const drafts = new Map();
   const timers = new Map();
-  const keyOf = (id) => catalogPath() + ":" + id;
+  const keyOf = (id) => storageKey(catalogPath() + ":" + id);
   const read = (key) => {
     if (drafts.has(key)) return drafts.get(key);
     try {

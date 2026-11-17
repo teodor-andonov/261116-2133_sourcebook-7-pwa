@@ -1,5 +1,6 @@
 import { $, modal } from "./dom.js";
 import { request } from "./transport.js";
+import { storageKey } from "../local/app-location.js";
 
 const sessions = new Map();
 
@@ -20,7 +21,7 @@ function remember(key, draft) {
 
 export async function editMarkdown(row, endpoint, onSaved) {
   endpoint += "/markdown";
-  const key = "sourcebook:markdown:" + endpoint;
+  const key = storageKey("sourcebook:markdown:" + endpoint);
   let session = sessions.get(key);
   if (session?.dialog?.open) return;
   if (!session) {

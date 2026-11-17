@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-To try installation, sharing or offline launch, run `npm run build` and then `npm run preview`. Open the URL Vite prints in Chrome or Edge and wait for **Offline ready** before disconnecting. For access from another device, serve `dist/` at the root of a dedicated HTTPS origin. Keep that origin stable so the installed app and saved folder permissions continue to work. Serve `.js` and `.mjs` as JavaScript and `.wasm` as WebAssembly.
+To try installation, sharing or offline launch, run `npm run build` and then `npm run preview`. Open the URL Vite prints in Chrome or Edge and wait for **Offline ready** before disconnecting. The [published PWA](https://teodor-andonov.github.io/261116-2133_sourcebook-7-pwa/) is served by GitHub Pages. Install it from that address. If you already use a local library, choose **Open library** on the published app and select the same folder to grant access at the Pages address.
 
 ## Open a library
 
@@ -33,6 +33,10 @@ To try installation, sharing or offline launch, run `npm run build` and then `np
 | `revisions/` | Earlier Markdown file bytes. |
 
 The folder is the library. Browser storage keeps folder permissions and temporary drafts. Current library format is **1**. Only open existing Sourcebook 7 libraries with this app.
+
+## Publish
+
+GitHub Actions publishes the static build after pushes to `main`. Local commits are kept local until a push is explicitly requested.
 
 See [status](docs/status.md) for the latest verification.
 
