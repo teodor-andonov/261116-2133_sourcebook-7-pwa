@@ -9,3 +9,5 @@ Chrome smoke checks covered offline library use, previews, edits, library switch
 For a local trial, use **Open library** on the [disposable test library](../../../test-artifacts/261116-2210_sourcebook-7-test-library) created on this machine. It contains a PNG, a two-page PDF, a Markdown note and a plain-text file.
 
 [Plain-text link capture](sessions/261116-2225_plain-text-links.md)
+
+[Recovery of failed shortcut drafts](sessions/261117-0016_link-draft-recovery.md)

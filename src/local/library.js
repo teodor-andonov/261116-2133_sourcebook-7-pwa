@@ -761,7 +761,22 @@ export class Library {
   }
 
   async upload(receipt, options, file, progress) {
-    const existing = this.jobs.get(receipt);
+    let existing = this.jobs.get(receipt);
+    if (
+      existing?.kind === "upload" &&
+      ["awaiting-upload", "intent"].includes(existing.phase) &&
+      !existing.destination &&
+      /\.url$/i.test(existing.name) &&
+      file.name === existing.name.slice(0, -4) + ".link"
+    ) {
+      existing = await this.saveJob({
+        ...existing,
+        name: file.name,
+        expected: file.size,
+        phase: "awaiting-upload",
+        error: null,
+      });
+    }
     if (existing && existing.phase !== "awaiting-upload") return existing;
     if (!existing)
       await this.prepareUploads([
@@ -913,7 +928,10 @@ export class Library {
       job.kind === "upload" ? job.name : nameOf(job.source),
     );
     if (extension.toLowerCase() === ".url")
-      throw new Problem(400, "Paste the web address to save it as a .link file.");
+      throw new Problem(
+        400,
+        "Paste the web address to save it as a .link file.",
+      );
     const path =
       job.destination ??
       ["files", job.folder, job.resource + extension].filter(Boolean).join("/");

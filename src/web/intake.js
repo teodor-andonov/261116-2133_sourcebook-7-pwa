@@ -28,22 +28,23 @@ export function intakeController({ state, browse, status }) {
   }
 
   async function deliver(draft) {
-    const { putDraft, deleteDraft } = await storage();
+    const { putDraft, deleteDraft, portableLinkFile } = await storage();
     draft.catalog ??= state.catalog?.id;
     if (!draft.catalog) return false;
     await putDraft(draft);
     try {
       let job = await getJob(draft.catalog, draft.id);
-      if (!job || job.phase === "awaiting-upload") {
-        const query = new URLSearchParams({ name: draft.file.name });
+      const file =
+        job?.phase === "done" ? draft.file : await portableLinkFile(draft.file);
+      if (!job || job.phase === "awaiting-upload" || file !== draft.file) {
+        const query = new URLSearchParams({ name: file.name });
         if (draft.managed === false) query.set("folder", draft.folder);
         else query.set("capture", "1");
         if (draft.unnamedNote) query.set("note", "1");
         job = await upload(
           base(draft.catalog) + "/uploads/" + draft.id + "?" + query,
-          draft.file,
-          (percent) =>
-            status("Importing " + draft.file.name + " · " + percent + "%"),
+          file,
+          (percent) => status("Importing " + file.name + " · " + percent + "%"),
         );
       } else if (
         job.error &&

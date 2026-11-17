@@ -30,6 +30,35 @@ export const putDraft = (draft) =>
 export const deleteDraft = (id) =>
   transact("readwrite", (store) => store.delete(id));
 
+function linkFile(address, title) {
+  return new File(["<" + address + ">\n"], title + ".link", {
+    type: "text/plain",
+  });
+}
+
+export async function portableLinkFile(file) {
+  if (!/\.url$/i.test(file.name)) return file;
+  if (file.size <= 8192) {
+    const text = await file.text();
+    const address = /^[ \t]*URL[ \t]*=[ \t]*([^\r\n]+)/im
+      .exec(text)?.[1]
+      ?.trim();
+    if (address && /^https?:\/\/\S+$/i.test(address)) {
+      let url;
+      try {
+        url = new URL(address);
+      } catch {
+        /* Leave invalid shortcuts in Needs attention. */
+      }
+      if (url)
+        return linkFile(url.href, file.name.slice(0, -4) || url.hostname);
+    }
+  }
+  throw new Error(
+    "This shortcut has no valid HTTP or HTTPS address. Paste the address to save it as a .link file.",
+  );
+}
+
 export function captureEntries({
   text = "",
   uriList = "",
@@ -85,13 +114,8 @@ export function captureEntries({
       (!/\.(url|download)$/i.test(file.name) && file.name !== possible),
   );
   if (links.length && realFiles.length === 0)
-    return links.map(
-      (link) =>
-        new File(
-          ["<" + link + ">\n"],
-          (name || new URL(link).hostname || "Link") + ".link",
-          { type: "text/plain" },
-        ),
+    return links.map((link) =>
+      linkFile(link, name || new URL(link).hostname || "Link"),
     );
   if (realFiles.length) return realFiles;
   if (!trimmed) return [];
