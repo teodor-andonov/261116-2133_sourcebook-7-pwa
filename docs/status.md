@@ -17,3 +17,5 @@ For a local trial, use **Open library** on the [disposable test library](../../.
 [GitHub Pages deployment](sessions/261117-0050_github-pages.md)
 
 [Library reopen and website screenshots](sessions/261117-0110_library-reopen-thum.md)
+
+[Screenshot preview order](sessions/261117-0903_screenshot-preview-order.md)

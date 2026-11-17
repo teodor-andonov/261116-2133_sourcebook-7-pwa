@@ -15,10 +15,9 @@ import {
 import { makeDerivatives } from "./previews.js";
 import {
   basicLink,
-  chooseCover,
   linkTitle,
   lookupLink,
-  screenshotURL,
+  resolveLinkCover,
 } from "./link-preview.js";
 
 const idPattern = /^\d{6}-\d{6}-\d{4}$/;
@@ -1255,17 +1254,11 @@ export class Library {
     this.linkJobs.add(id);
     this.linkQueue = this.linkQueue
       .then(async () => {
-        const result = screenshot
-          ? null
-          : await lookupLink(address).catch(() => null);
         if (this.rows.get(id)?.link?.url !== address) return;
-        let image = result?.covers?.length
-          ? await chooseCover(result.covers)
-          : {};
-        const screenshotAddress = screenshotURL(address);
-        if (!image.bitmap && !image.cover && screenshotAddress)
-          image = await chooseCover([screenshotAddress], 12000);
-        const { bitmap, cover } = image;
+        const [{ bitmap, cover }, result] = await Promise.all([
+          resolveLinkCover(address, screenshot),
+          screenshot ? null : lookupLink(address).catch(() => null),
+        ]);
         if (!result && !bitmap && !cover) return;
         let derivatives;
         if (bitmap) {

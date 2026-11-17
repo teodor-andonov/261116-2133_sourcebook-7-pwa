@@ -1,6 +1,3 @@
-import MarkdownIt from "markdown-it";
-
-const markdown = new MarkdownIt();
 const limit = 512 * 1024;
 
 function publicURL(value, base) {
@@ -65,7 +62,7 @@ export function youtubeId(url) {
   return /^[\w-]{11}$/.test(id ?? "") ? id : "";
 }
 
-export function parseDefuddle(body, base) {
+export function parseDefuddle(body) {
   const match = /^---\r?\n([\s\S]{0,20000}?)\r?\n---(?:\r?\n|$)/.exec(body);
   const fields = new Map();
   for (const line of (match?.[1] ?? "").split(/\r?\n/)) {
@@ -85,31 +82,7 @@ export function parseDefuddle(body, base) {
     if (typeof decoded === "string")
       fields.set(field[1].toLowerCase(), decoded);
   }
-  const article = markdown.parse(
-    body.slice(match?.[0].length ?? 0, (match?.[0].length ?? 0) + 100000),
-    {},
-  );
-  const embedded = article
-    .flatMap((token) => token.children ?? [])
-    .filter((token) => token.type === "image")
-    .map((token) => token.attrGet("src"));
-  const covers = [fields.get("image"), fields.get("cover"), ...embedded]
-    .filter(Boolean)
-    .flatMap((image) => {
-      const url = publicURL(image, base);
-      return url?.protocol === "https:" &&
-        !/\.(?:svg|ico)$|favicon|avatar|badge|sprite|tracking|pixel|logo/i.test(
-          url.pathname,
-        )
-        ? [url.href]
-        : [];
-    });
-  const icon = fields.get("favicon") || "/favicon.ico";
-  return {
-    title: fields.get("title"),
-    covers: [...new Set(covers)].slice(0, 5),
-    favicon: publicURL(icon, base)?.href,
-  };
+  return { title: fields.get("title") };
 }
 
 async function responseText(url) {
@@ -157,16 +130,29 @@ export async function lookupLink(address) {
     } catch {
       /* The thumbnail is still available by video ID. */
     }
-    return {
-      title,
-      covers: ["https://i.ytimg.com/vi/" + id + "/hqdefault.jpg"],
-      favicon: "https://www.youtube.com/favicon.ico",
-    };
+    if (typeof title === "string" && title.trim())
+      return { title, favicon: "https://www.youtube.com/favicon.ico" };
   }
-  return parseDefuddle(
-    await responseText("https://defuddle.md/" + url.href),
-    url,
-  );
+  return {
+    ...parseDefuddle(await responseText("https://defuddle.md/" + url.href)),
+    favicon: new URL("/favicon.ico", url).href,
+  };
+}
+
+export function nativeCoverURL(address) {
+  const url = publicURL(address);
+  if (!url) return null;
+  const id = youtubeId(url);
+  if (id) return "https://i.ytimg.com/vi/" + id + "/hqdefault.jpg";
+  if (
+    url.protocol === "https:" &&
+    url.hostname === "pbs.twimg.com" &&
+    url.pathname.startsWith("/media/")
+  ) {
+    url.hash = "";
+    return url.href;
+  }
+  return null;
 }
 
 export function screenshotURL(address) {
@@ -232,4 +218,14 @@ export async function chooseCover(covers, timeout = 3500) {
     return { cover: url };
   }
   return {};
+}
+
+export async function resolveLinkCover(address, screenshot = false) {
+  const native = screenshot ? null : nativeCoverURL(address);
+  if (native) {
+    const cover = await chooseCover([native]);
+    if (cover.bitmap || cover.cover) return cover;
+  }
+  const fallback = screenshotURL(address);
+  return fallback ? chooseCover([fallback], 12000) : {};
 }
