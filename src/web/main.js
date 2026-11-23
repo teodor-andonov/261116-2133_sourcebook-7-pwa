@@ -128,7 +128,7 @@ const properties = propertiesEditor({
   toast,
 });
 function drawInspector(row) {
-  renderInspector(row, resource, state.data?.tags);
+  renderInspector(row, resource, state.data?.tags, state.selectedIds.size);
   properties.restore(row);
 }
 function select(id, { additive = false, range = false } = {}) {
@@ -223,9 +223,12 @@ async function browse({ refresh = false, background = false } = {}) {
     }
     $("#results").inert = false;
     $("#results").removeAttribute("aria-busy");
-    const hasSelection = !!selected();
+    const row = selected();
+    const inspectorRevision = $("#properties")?.dataset.revision;
     $("#query-error").hidden = true;
-    draw({ keepInspector: background && hasSelection });
+    draw({
+      keepInspector: background && row && inspectorRevision === String(row.revision),
+    });
     restoreResultScroll();
     if (state.restoreScroll === null) rememberWorkspace(state);
     status(

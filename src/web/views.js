@@ -167,13 +167,22 @@ export function renderResults(state, resource) {
   syncThumbnails(host);
 }
 
-export function renderInspector(row, resource, suggestions = []) {
+export function renderInspector(
+  row,
+  resource,
+  suggestions = [],
+  selectionSize = 0,
+) {
   const host = $("#inspector-content");
   if (!row) {
     host.innerHTML =
       '<p class="inspector-empty">Select a file to see its details.</p>';
     return;
   }
+  const canRebuild =
+    selectionSize > 1 ||
+    row.previewStatus === "failed" ||
+    (row.preview && ["html", "link"].includes(row.type));
   host.innerHTML = `<form id="properties" class="inspector-section" data-revision="${row.revision}">
       ${field("Name", "name", row.title, 'maxlength="240" required')}
       ${field("Tags", "tags", "", 'placeholder="Add a tag" list="tag-suggestions" maxlength="240"')}
@@ -181,8 +190,8 @@ export function renderInspector(row, resource, suggestions = []) {
       <div class="tag-chips">${row.tags.map((tag) => `<button type="button" data-action="remove-tag" data-path="${e(tag)}" aria-label="Remove ${e(tag)}">${e(tag)} ${icon("close")}</button>`).join("")}</div>
       <small data-save-status aria-live="polite"></small>
       ${row.previewStatus === "pending" ? "<small>Thumbnail pending</small>" : ""}
-      ${row.previewStatus === "failed" ? `<small>Thumbnail unavailable</small><button type="button" data-action="rebuild-preview" data-path="${e(row.id)}">Rebuild preview</button>` : ""}
-      ${row.preview && ["html", "link"].includes(row.type) ? `<button type="button" data-action="rebuild-preview" data-path="${e(row.id)}">Rebuild preview</button>` : ""}
+      ${row.previewStatus === "failed" ? "<small>Thumbnail unavailable</small>" : ""}
+      ${canRebuild ? '<button type="button" data-action="rebuild-preview">Rebuild preview</button>' : ""}
       <label class="field">Notes<textarea name="notes" rows="4" maxlength="64000">${e(row.notes)}</textarea></label>
       <dl class="file-information">
         <dt>Type</dt><dd>${e(row.type)}</dd><dt>Extension</dt><dd>${e(row.extension?.toUpperCase() || "—")}</dd><dt>Original</dt><dd>${e(row.name)}</dd>

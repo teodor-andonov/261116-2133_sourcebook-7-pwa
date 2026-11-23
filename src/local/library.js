@@ -1176,7 +1176,7 @@ export class Library {
     if (!this.locations.has(id)) return Promise.resolve();
     const knownLink = this.row(id).link;
     if (rebuild && knownLink?.url && this.ready.has(id)) {
-      this.enrichLink(id, knownLink.url, screenshot);
+      this.enrichLink(id, knownLink.url, screenshot, !screenshot);
       return this.linkQueue;
     }
     const pending = this.previewJobs.get(id);
@@ -1223,7 +1223,8 @@ export class Library {
           this.previewFailures.delete(id);
           this.previewTokens.set(id, (this.previewTokens.get(id) ?? 0) + 1);
         });
-        if (result.text?.url) this.enrichLink(id, result.text.url, screenshot);
+        if (result.text?.url)
+          this.enrichLink(id, result.text.url, screenshot, rebuild && !screenshot);
       })
       .catch((error) => {
         if (this.rows.has(id)) this.previewFailures.add(id);
@@ -1237,10 +1238,10 @@ export class Library {
     return task;
   }
 
-  async saveLinkDetails(row, details) {
+  async saveLinkDetails(row, details, refreshTitle = false) {
     const automaticTitle = linkTitle(details);
     const useAutomaticTitle =
-      row.title === (row.link?.automaticTitle ?? row.originalName);
+      refreshTitle || row.title === (row.link?.automaticTitle ?? row.originalName);
     await this.saveRow({
       ...row,
       title: useAutomaticTitle ? automaticTitle : row.title,
@@ -1249,12 +1250,13 @@ export class Library {
     });
   }
 
-  enrichLink(id, address, screenshot = false) {
+  enrichLink(id, address, screenshot = false, refreshTitle = false) {
     if (this.linkJobs.has(id) || globalThis.navigator?.onLine === false) return;
     this.linkJobs.add(id);
     this.linkQueue = this.linkQueue
       .then(async () => {
-        if (this.rows.get(id)?.link?.url !== address) return;
+        const initial = this.rows.get(id);
+        if (initial?.link?.url !== address) return;
         const [{ bitmap, cover }, result] = await Promise.all([
           resolveLinkCover(address, screenshot),
           screenshot ? null : lookupLink(address).catch(() => null),
@@ -1281,18 +1283,22 @@ export class Library {
             await this.files.write(preview(id), derivatives.image);
             await this.files.write(thumbnail(id), derivatives.thumbnail);
           }
+          const fetchedTitle =
+            typeof result?.title === "string" && result.title.trim();
           const details = {
             ...row.link,
-            title:
-              (typeof result?.title === "string" && result.title.trim()) ||
-              row.link.title,
+            title: fetchedTitle || row.link.title,
             cover: derivatives ? undefined : (cover ?? row.link.cover),
             hasCover: Boolean(derivatives || row.link.hasCover),
             favicon: result?.favicon?.startsWith("https://")
               ? result.favicon
               : row.link.favicon,
           };
-          await this.saveLinkDetails(row, details);
+          await this.saveLinkDetails(
+            row,
+            details,
+            Boolean(refreshTitle && fetchedTitle && row.title === initial.title),
+          );
           this.previewTokens ??= new Map();
           this.previewTokens.set(id, (this.previewTokens.get(id) ?? 0) + 1);
         });

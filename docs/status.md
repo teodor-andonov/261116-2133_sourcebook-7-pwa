@@ -23,3 +23,5 @@ For a local trial, use **Open library** on the [disposable test library](../../.
 [Sourcebook 5 library migration](sessions/261123-1303_library-port.md)
 
 [Shortcut conversion and bulk preview rebuild](sessions/261123-1328_link-conversion.md)
+
+[Sidebar preview rebuild and link titles](sessions/261123-1343_sidebar-rebuild.md)
