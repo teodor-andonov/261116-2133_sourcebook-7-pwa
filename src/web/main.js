@@ -1074,6 +1074,12 @@ function resourceCommands(item, viewer) {
       return run(actions[action], { path: item.id });
     },
   });
+  const rebuild = command(
+    "rebuild-preview",
+    undefined,
+    undefined,
+    viewer ? { path: item.id } : undefined,
+  );
   return [
     ...(item.available
       ? [
@@ -1083,7 +1089,7 @@ function resourceCommands(item, viewer) {
             run: () => run(() => downloadOriginal(resource(item.id))),
           },
           ...(item.markdown ? [forItem("edit-markdown")] : []),
-          forItem("rebuild-preview"),
+          rebuild,
           ...(item.type === "link" ? [forItem("capture-screenshot")] : []),
           forItem("move"),
           forItem("copy"),
@@ -1093,6 +1099,7 @@ function resourceCommands(item, viewer) {
       : []),
     ...(!item.available
       ? [
+          ...(!viewer && state.selectedIds.size > 1 ? [rebuild] : []),
           {
             label: "Relink original",
             icon: "link",
@@ -1126,6 +1133,7 @@ function moreActions(anchor = $('[data-action="more"]'), point) {
       ...(state.selectedIds.size
         ? [
             command("tag-files"),
+            command("rebuild-preview"),
             command("move"),
             command("copy"),
             command("delete"),
@@ -1383,8 +1391,13 @@ const actions = {
         anchor: $('[data-action="resource-actions"]'),
       });
   },
-  "rebuild-preview": async ({ path }) => {
-    await request(resource(path) + "/preview/rebuild", { method: "POST" });
+  "rebuild-preview": async ({ path } = {}) => {
+    const ids = path ? [path] : [...state.selectedIds];
+    await Promise.all(
+      ids.map((id) =>
+        request(resource(id) + "/preview/rebuild", { method: "POST" }),
+      ),
+    );
     await browse();
   },
   "capture-screenshot": async ({ path }) => {

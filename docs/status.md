@@ -21,3 +21,5 @@ For a local trial, use **Open library** on the [disposable test library](../../.
 [Screenshot preview order](sessions/261117-0903_screenshot-preview-order.md)
 
 [Sourcebook 5 library migration](sessions/261123-1303_library-port.md)
+
+[Shortcut conversion and bulk preview rebuild](sessions/261123-1328_link-conversion.md)
