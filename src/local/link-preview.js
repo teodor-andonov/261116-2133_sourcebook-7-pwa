@@ -186,6 +186,36 @@ async function loadImage(url, cors, milliseconds) {
   }
 }
 
+function coverBitmap(image) {
+  const scale = Math.min(
+    1,
+    960 / Math.max(image.naturalWidth, image.naturalHeight),
+  );
+  return createImageBitmap(image, {
+    resizeWidth: Math.round(image.naturalWidth * scale),
+    resizeHeight: Math.round(image.naturalHeight * scale),
+  });
+}
+
+function isThumBrowserError(image) {
+  if (image.naturalWidth !== 960 || image.naturalHeight !== 520) return false;
+  // Thum.io can return a Chromium network error as a successful PNG, with
+  // no capture status exposed to the browser. Match the icon and heading,
+  // above the URL-specific text, in the standard screenshot crop.
+  const canvas = document.createElement("canvas");
+  canvas.width = 240;
+  canvas.height = 94;
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 244, 156, 240, 94, 0, 0, 240, 94);
+  const pixels = context.getImageData(0, 0, 240, 94).data;
+  let hash = 2166136261;
+  for (let index = 0; index < pixels.length; index += 4) {
+    const dark = Number(pixels[index] < 180);
+    hash = Math.imul(hash ^ dark, 16777619);
+  }
+  return (hash >>> 0) === 1908066656;
+}
+
 export async function chooseCover(covers, timeout = 3500) {
   const deadline = performance.now() + Math.max(7000, timeout);
   const load = (url, cors) => {
@@ -202,15 +232,7 @@ export async function chooseCover(covers, timeout = 3500) {
       continue;
     if (readable) {
       try {
-        const scale = Math.min(
-          1,
-          960 / Math.max(image.naturalWidth, image.naturalHeight),
-        );
-        const bitmap = await createImageBitmap(image, {
-          resizeWidth: Math.round(image.naturalWidth * scale),
-          resizeHeight: Math.round(image.naturalHeight * scale),
-        });
-        return { bitmap };
+        return { bitmap: await coverBitmap(image) };
       } catch {
         /* Fall back to displaying the original image URL. */
       }
@@ -227,5 +249,14 @@ export async function resolveLinkCover(address, screenshot = false) {
     if (cover.bitmap || cover.cover) return cover;
   }
   const fallback = screenshotURL(address);
-  return fallback ? chooseCover([fallback], 12000) : {};
+  if (!fallback) return {};
+  const image = await loadImage(fallback, true, 12000);
+  if (!image || image.naturalWidth < 160 || image.naturalHeight < 100)
+    return {};
+  try {
+    if (!isThumBrowserError(image)) return { bitmap: await coverBitmap(image) };
+  } catch {
+    /* Keep the existing preview when the screenshot cannot be checked. */
+  }
+  return {};
 }

@@ -25,3 +25,5 @@ For a local trial, use **Open library** on the [disposable test library](../../.
 [Shortcut conversion and bulk preview rebuild](sessions/261123-1328_link-conversion.md)
 
 [Sidebar preview rebuild and link titles](sessions/261123-1343_sidebar-rebuild.md)
+
+[Website screenshot failure fallback](sessions/261124-1304_thum-fallback.md)
